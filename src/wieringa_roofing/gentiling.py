@@ -205,9 +205,6 @@ def draw_tri(tri : Tri, cr : cairo.Context):
     cr.set_source_rgb(*color_to_rgb(tri.color))
     cr.fill()
 
-    cr.set_line_width((tri.B() - tri.A()).len() / 10.0)
-    cr.set_line_join(cairo.LINE_JOIN_ROUND)
-    cr.stroke()
 
 def draw_tris(tris : list[Tri], cr : cairo.Context):
     for tri in tris:
@@ -215,6 +212,36 @@ def draw_tris(tris : list[Tri], cr : cairo.Context):
 
 
 def main():
-    t = starting_tris()
-    t = subdivide_tris_n(t, 5)
+    tris = starting_tris()
+    tris = subdivide_tris_n(tris, 6)
 
+    # Output size
+    surface_width, surface_height = 800, 600
+
+    # 1. Create surface and context
+    surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, surface_width, surface_height)
+    ctx = cairo.Context(surface)
+
+    # 2. Define "model coordinates" (logical coordinate system)
+    model_width, model_height = 1, 1  # units in your drawing space
+
+    # 3. Compute scale to fit model into surface while preserving aspect ratio
+    model2surface_x = surface_width / model_width
+    model2surface_y = surface_height / model_height
+    model2surface = min(model2surface_x, model2surface_y)  # uniform scaling
+
+    # 4. Translate to center
+    tx = 0.5 * model2surface_x
+    ty = 0.5 * model2surface_y
+    ctx.translate(tx, ty)
+    ctx.scale(model2surface, model2surface)
+
+    # Now all drawing is in model coordinates (0..100)
+    draw_tris(tris, ctx)
+
+    # 5. Save
+    surface.write_to_png("tiling.png")
+
+
+if __name__ == "__main__":
+    main()
