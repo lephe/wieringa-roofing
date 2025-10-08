@@ -42,7 +42,7 @@ class QQuad:
 
     def mul(self, other: "QQuad") -> "QQuad":
         assert self.compatible(other)
-        # (a + b√sq)(c + d√sq) = (ac + bd*sq) + (ad + bc)√sq
+        # (a + b√sq)(a' + b'√sq) = (aa' + bb' * sq) + (ab' + ba') * √sq
         return QQuad(
             self.a * other.a + self.b * other.b * self.sq,
             self.a * other.b + self.b * other.a,
@@ -122,7 +122,7 @@ class Point2D:
 
     def __truediv__(self, scalar: QQuad) -> "Point2D":
         return self.scale(scalar.reciprocal())
-    
+ 
     @staticmethod
     def of_angle(angle: float) -> "Point2D":
         return Point2D(QQuad(cos(angle)), QQuad(sin(angle)))
@@ -149,7 +149,8 @@ class Tri:
     def C(self) -> Point2D:
         return self.vs[2]
 
-def subdivide_tri(tri : Tri) -> list[Tri]:
+def subdivide_tri_method_2(tri : Tri) -> list[Tri]:
+    # (1 + sqrt(5)) / 2
     goldenRatio = QQuad(Fraction(1), Fraction(1)) / QQuad(Fraction(2))
     if tri.color == 0:
         # Subdivide red (sharp isosceles) (half kite) triangle
@@ -164,13 +165,29 @@ def subdivide_tri(tri : Tri) -> list[Tri]:
         return [Tri((tri.B(), P, tri.A()), 1), \
             Tri((P, tri.C(), tri.B()), 0)]
 
+
+def subdivide_tri_method_1(tri : Tri) -> list[Tri]:
+    # (1 + sqrt(5)) / 2
+    goldenRatio = QQuad(Fraction(1), Fraction(1)) / QQuad(Fraction(2))
+    if tri.color == 0:
+        # Subdivide red
+        P = tri.A() + (tri.B() - tri.A()) / goldenRatio
+        return [ Tri((tri.C(), P, tri.B()), 0), Tri((P, tri.C(), tri.A()), 1)]
+    else:
+        # Subdivide blue
+        Q = tri.B() + (tri.A() - tri.B()) / goldenRatio
+        R = tri.B() + (tri.C() - tri.B()) / goldenRatio
+        return [Tri((R, tri.C(), tri.A()), 1), Tri((Q, R, tri.B()), 1), Tri((R, Q, tri.A()), 0)]
+
+
 def subdivide_tris_once(triangles : list[Tri]) -> list[Tri]:
+    SUBDIVIDE_METHOD = subdivide_tri_method_1
     # 1 + sqrt(5) / 2
 
     # How go give type annotation? This is List[Tri]
     result : list[Tri] = []
     for tri in triangles:
-        result.extend(subdivide_tri(tri))
+        result.extend(SUBDIVIDE_METHOD(tri))
     return result
 
 def subdivide_tris_n(tris : list[Tri], n : int) -> list[Tri]:
@@ -179,16 +196,15 @@ def subdivide_tris_n(tris : list[Tri], n : int) -> list[Tri]:
     return tris
 
 
-def starting_tris() -> list[Tri]:
+def starting_tris(center : Point2D, radius : QQuad) -> list[Tri]:
     # Create wheel of red triangles around the origin
     triangles : list[Tri] = []
     for i in range(10):
-        b : Point2D = Point2D.of_angle((2*i - 1) * math.pi / 10)
-        c : Point2D = Point2D.of_angle((2*i + 1) * math.pi / 10)
-        
+        b : Point2D = center + Point2D.of_angle((2*i - 1) * math.pi / 10).scale(radius)
+        c : Point2D = center + Point2D.of_angle((2*i + 1) * math.pi / 10).scale(radius)
         if i % 2 == 0:
             b, c = c, b # Make sure to mirror every second triangle
-        triangles.append(Tri((b, Point2D.zero(), c), 0))
+        triangles.append(Tri((center, b, c), 0))
     return triangles
 
 def color_to_rgb(color: int) -> tuple[float, float, float]:
@@ -197,23 +213,42 @@ def color_to_rgb(color: int) -> tuple[float, float, float]:
     else:
         return (0.4, 0.4, 1.0) # blue
 
-def draw_tri(tri : Tri, cr : cairo.Context):
+def draw_tri(tri : Tri, model_stroke : float, cr : cairo.Context):
     cr.move_to(tri.A().x.to_float(), tri.A().y.to_float())
     cr.line_to(tri.B().x.to_float(), tri.B().y.to_float())
     cr.line_to(tri.C().x.to_float(), tri.C().y.to_float())
     cr.close_path()
+    print(f"drawing tri: {tri}")
     cr.set_source_rgb(*color_to_rgb(tri.color))
+    # cr.fill()
+    # cr.fill_preserve()
+    # # tracciare il contorno (stroke)
+    # cr.set_source_rgb(0, 0, 0)  # nero
+    cr.set_line_width(model_stroke)
     cr.fill()
 
+    # Note that this is careful, we only draw C -> A -> B, but no B -> C
+    cr.set_line_join(cairo.LINE_JOIN_ROUND)
+    cr.move_to(tri.C().x.to_float(), tri.C().y.to_float())
+    cr.line_to(tri.A().x.to_float(), tri.A().y.to_float())
+    cr.line_to(tri.B().x.to_float(), tri.B().y.to_float())
+    cr.set_source_rgb(0.2, 0.2, 0.2)
+    cr.stroke()
 
-def draw_tris(tris : list[Tri], cr : cairo.Context):
+
+def draw_tris(tris : list[Tri], model_stroke : float, cr : cairo.Context):
     for tri in tris:
-        draw_tri(tri, cr)
+        draw_tri(tri, model_stroke, cr)
 
 
 def main():
-    tris = starting_tris()
-    tris = subdivide_tris_n(tris, 6)
+    # 2. Define "model coordinates" (logical coordinate system)
+    model_width, model_height = 300, 300  # units in your drawing space
+    model_stroke = 1
+    center = Point2D(QQuad(model_width // 2), QQuad(model_height // 2))
+    radius = QQuad(math.sqrt(model_width**2 + model_height**2) // 3)
+    tris = starting_tris(center, radius)
+    tris = subdivide_tris_n(tris, 5)
 
     # Output size
     surface_width, surface_height = 800, 600
@@ -222,22 +257,16 @@ def main():
     surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, surface_width, surface_height)
     ctx = cairo.Context(surface)
 
-    # 2. Define "model coordinates" (logical coordinate system)
-    model_width, model_height = 1, 1  # units in your drawing space
-
     # 3. Compute scale to fit model into surface while preserving aspect ratio
     model2surface_x = surface_width / model_width
     model2surface_y = surface_height / model_height
     model2surface = min(model2surface_x, model2surface_y)  # uniform scaling
 
     # 4. Translate to center
-    tx = 0.5 * model2surface_x
-    ty = 0.5 * model2surface_y
-    ctx.translate(tx, ty)
     ctx.scale(model2surface, model2surface)
 
     # Now all drawing is in model coordinates (0..100)
-    draw_tris(tris, ctx)
+    draw_tris(tris, model_stroke, ctx)
 
     # 5. Save
     surface.write_to_png("tiling.png")
