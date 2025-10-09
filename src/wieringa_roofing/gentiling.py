@@ -85,69 +85,69 @@ class QQuad:
 
 
 @dataclass
-class Point2D:
+class QPoint2D:
     x: QQuad = field(default_factory=QQuad())
     y: QQuad = field(default_factory=QQuad())
 
     @staticmethod
-    def zero() -> "Point2D":
-        return Point2D(QQuad(0), QQuad(0))
+    def zero() -> "QPoint2D":
+        return QPoint2D(QQuad(0), QQuad(0))
 
-    def add(self, other: "Point2D") -> "Point2D":
-        return Point2D(self.x + other.x, self.y + other.y)
+    def add(self, other: "QPoint2D") -> "QPoint2D":
+        return QPoint2D(self.x + other.x, self.y + other.y)
 
-    def neg(self) -> "Point2D":
-        return Point2D(-self.x, -self.y)
+    def neg(self) -> "QPoint2D":
+        return QPoint2D(-self.x, -self.y)
 
-    def sub(self, other: "Point2D") -> "Point2D":
+    def sub(self, other: "QPoint2D") -> "QPoint2D":
         return self.add(other.neg())
 
-    def scale(self, scalar: QQuad) -> "Point2D":
-        return Point2D(self.x * scalar, self.y * scalar)
+    def scale(self, scalar: QQuad) -> "QPoint2D":
+        return QPoint2D(self.x * scalar, self.y * scalar)
 
-    def __add__(self, other: "Point2D") -> "Point2D":
+    def __add__(self, other: "QPoint2D") -> "QPoint2D":
         return self.add(other)
 
-    def __sub__(self, other: "Point2D") -> "Point2D":
+    def __sub__(self, other: "QPoint2D") -> "QPoint2D":
         return self.sub(other)
 
-    def __neg__(self) -> "Point2D":
+    def __neg__(self) -> "QPoint2D":
         return self.neg()
 
-    def __mul__(self, scalar: QQuad) -> "Point2D":
+    def __mul__(self, scalar: QQuad) -> "QPoint2D":
         return self.scale(scalar)
 
-    def __rmul__(self, scalar: QQuad) -> "Point2D":
+    def __rmul__(self, scalar: QQuad) -> "QPoint2D":
         return self.scale(scalar)
 
-    def __truediv__(self, scalar: QQuad) -> "Point2D":
+    def __truediv__(self, scalar: QQuad) -> "QPoint2D":
         return self.scale(scalar.reciprocal())
  
     @staticmethod
-    def of_angle(angle: float) -> "Point2D":
-        return Point2D(QQuad(cos(angle)), QQuad(sin(angle)))
+    def of_angle(angle: float) -> "QPoint2D":
+        return QPoint2D(QQuad(cos(angle)), QQuad(sin(angle)))
 
     def len(self) -> float:
         return sqrt(self.x.to_float()**2 + self.y.to_float()**2)
 @dataclass
 class Tri:
     # vertices in the tri.
-    vs: tuple[Point2D, Point2D, Point2D]
+    vs: tuple[QPoint2D, QPoint2D, QPoint2D]
     # height : float
     # color.
     color: int
 
-    def __init__(self, vs: tuple[Point2D, Point2D, Point2D], color: int):
+    def __init__(self, vs: tuple[QPoint2D, QPoint2D, QPoint2D], color: int):
         self.vs = vs
         self.color = color
 
-    def A(self) -> Point2D:
+    def A(self) -> QPoint2D:
         return self.vs[0]
     
-    def B(self) -> Point2D:
+    def B(self) -> QPoint2D:
         return self.vs[1]
     
-    def C(self) -> Point2D:
+    def C(self) -> QPoint2D:
         return self.vs[2]
 
 def subdivide_tri_method_2(tri : Tri) -> list[Tri]:
@@ -197,12 +197,12 @@ def subdivide_tris_n(tris : list[Tri], n : int) -> list[Tri]:
     return tris
 
 
-def starting_tris(center : Point2D, radius : QQuad) -> list[Tri]:
+def starting_tris(center : QPoint2D, radius : QQuad) -> list[Tri]:
     # Create wheel of red triangles around the origin
     triangles : list[Tri] = []
     for i in range(10):
-        b : Point2D = center + Point2D.of_angle((2*i - 1) * math.pi / 10).scale(radius)
-        c : Point2D = center + Point2D.of_angle((2*i + 1) * math.pi / 10).scale(radius)
+        b : QPoint2D = center + QPoint2D.of_angle((2*i - 1) * math.pi / 10).scale(radius)
+        c : QPoint2D = center + QPoint2D.of_angle((2*i + 1) * math.pi / 10).scale(radius)
         if i % 2 == 0:
             b, c = c, b # Make sure to mirror every second triangle
         triangles.append(Tri((center, b, c), 0))
@@ -242,11 +242,11 @@ def draw_tris(tris : list[Tri], model_stroke : float, cr : cairo.Context):
         draw_tri(tri, model_stroke, cr)
 
 
-def main():
+def tiling_by_subdivision():
     # 2. Define "model coordinates" (logical coordinate system)
     model_width, model_height = 300, 300  # units in your drawing space
     model_stroke = 1
-    center = Point2D(QQuad(model_width // 2), QQuad(model_height // 2))
+    center = QPoint2D(QQuad(model_width // 2), QQuad(model_height // 2))
     radius = QQuad(math.sqrt(model_width**2 + model_height**2) // 3)
     tris = starting_tris(center, radius)
     tris = subdivide_tris_n(tris, 5)
@@ -271,6 +271,82 @@ def main():
 
     # 5. Save
     surface.write_to_png("tiling.png")
+
+
+@dataclass
+class Point2D:
+    x: float = 0
+    y: float = 0
+
+    @staticmethod
+    def zero() -> "QPoint2D":
+        return QPoint2D(0, 0)
+
+    def add(self, other: "QPoint2D") -> "QPoint2D":
+        return QPoint2D(self.x + other.x, self.y + other.y)
+
+    def neg(self) -> "QPoint2D":
+        return QPoint2D(-self.x, -self.y)
+
+    def sub(self, other: "QPoint2D") -> "QPoint2D":
+        return self.add(other.neg())
+
+    def scale(self, scalar: float) -> "QPoint2D":
+        return QPoint2D(self.x * scalar, self.y * scalar)
+
+    def __add__(self, other: "QPoint2D") -> "QPoint2D":
+        return self.add(other)
+
+    def __sub__(self, other: "QPoint2D") -> "QPoint2D":
+        return self.sub(other)
+
+    def __neg__(self) -> "QPoint2D":
+        return self.neg()
+
+    def __mul__(self, scalar: float) -> "QPoint2D":
+        return self.scale(scalar)
+
+    def __rmul__(self, scalar: float) -> "QPoint2D":
+        return self.scale(scalar)
+
+    def __truediv__(self, scalar: float) -> "QPoint2D":
+        return self.scale(scalar.reciprocal())
+ 
+    @staticmethod
+    def of_angle(angle: float) -> "QPoint2D":
+        return Point2D(float(cos(angle)), float(sin(angle)))
+
+    def len(self) -> float:
+        return sqrt(self.x.to_float()**2 + self.y.to_float()**2)
+
+
+# cos(36°) = (1 + sqrt(5)) / 4 | cos^2 + sin^2 = 1
+# cos(72°) = (sqrt(5) - 1) / 4
+class Rhomb:
+    verts : List[QPoint2D]
+    color : bool
+
+    @property
+    def a(self) -> QPoint2D:
+        return self.verts[0]
+
+    @property
+    def b(self) -> QPoint2D:
+        return self.verts[1]
+
+    @property
+    def c(self) -> QPoint2D:
+        return self.verts[2]
+
+    @property
+    def d(self) -> QPoint2D:
+        return self.verts[3]
+
+def substitute(r : Rhomb) -> List[Rhomb]:
+    if r.color:
+        pass
+    else:
+        pass
 
 
 if __name__ == "__main__":
