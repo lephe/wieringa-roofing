@@ -133,6 +133,7 @@ class Point2D:
 class Tri:
     # vertices in the tri.
     vs: tuple[Point2D, Point2D, Point2D]
+    height : float
     # color.
     color: int
 
