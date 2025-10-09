@@ -9,6 +9,7 @@ Resources and related:
 - Algebraic theory of Penrose's non-periodic tilings of the plane [Volume I](https://www.sciencedirect.com/science/article/pii/1385725881900160) and [Volume II](https://www.sciencedirect.com/science/article/pii/1385725881900160)
 - [Penrose tiling](https://en.wikipedia.org/wiki/Penrose_tiling) on Wikipedia
 - [Utah notes on Penrose Tilings](https://www.math.utah.edu/~treiberg/PenroseSlides.pdf)
+- [Penrose tiling substitution rule](https://francis-press.com/uploads/papers/lR4ZcfqOrZSoJGiuDlQyZs9UOR7EKS4nf7SJFexU.pdf)
 
 > R. M. A. Wieringa noticed that the
 > thick and thin rhombs are in fact
