@@ -15,13 +15,14 @@ Therefore size ratio of smaller thick rhombi is 1/2s
 Middle point is:
   mid = (0,2s - new thick rhombi edge size) = (0, 2s - 1/2s)
 
-Three new thick rhombi:
-  origin = mid, angle = 180
-  origin = (0,2s), angle = 180 - 36
-  origin = (0,2s), angle = 180 + 36
+                                             Index
+Three new thick rhombi:                  1   2   3   4
+  origin = mid, angle = 180              3   4   1   2
+  origin = (0,2s), angle = 180 - 36      3   4   1   2
+  origin = (0,2s), angle = 180 + 36      3   4   1   2
 Two new thin rhombi:
-  origin = (-c,s), angle = 90 + 36
-  origin = (+c,s), angle = 90 - 36
+  origin = (-c,s), angle = 90 + 36       2   3   2   3
+  origin = (+c,s), angle = 90 - 36       2   3   2   3
 
 THIN (origin at "double arrow target")
 
@@ -38,9 +39,10 @@ Smaller thin rhombi has edge length equal to current short diagonal = 2c
 Therefore size ratio of smaller thin rhombi is 2c
 (and this is = 1/2s from the thick rhombi, so all good)
 
-Two new thick rhombi:
-  origin = (0,0), angle = 18
-  origin = (0,0), angle = 180 - 18
+                                             Index
+Two new thick rhombi:                    1   2   3   4
+  origin = (0,0), angle = 18             1   2   3   4
+  origin = (0,0), angle = 180 - 18       1   2   3   4
 Two new thin rhombi:
-  origin = (-2c,0), angle = 270 - 18
-  origin = (-2c,0), angle = 90 + 18
+  origin = (-2c,0), angle = 270 - 18     3   4   1   2
+  origin = (-2c,0), angle = 90 + 18      3   4   1   2
