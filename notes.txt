@@ -1,26 +1,46 @@
 THICK (origin at "source")
 
 Its coordinates are:
-  c = cos(72 / 2); s = sin(72 / 2);
+  c = cos(54); s = sin(54);
   (0,0) [bottom]
-  (-s,c)
-  (s,c)
-  (0,2c)
+  (-c,s)
+  (c,s)
+  (0,2s)
 Side length: 1
-Long diagonal: 2c
+Long diagonal: 2s
 
 Smaller thick rhombi has long diagonal equal to current side length = 1
-Therefore size ration of smaller thick rhombi is 1/2c
+Therefore size ratio of smaller thick rhombi is 1/2s
 
 Middle point is:
-  mid= (0,2c - new thick rhombi edge size) = (0, 2c - 1/2c)
+  mid = (0,2s - new thick rhombi edge size) = (0, 2s - 1/2s)
 
 Three new thick rhombi:
   origin = mid, angle = 180
-  origin = (0,2c), angle = 180 - 36
-  origin = (0,2c), angle = 180 + 36
+  origin = (0,2s), angle = 180 - 36
+  origin = (0,2s), angle = 180 + 36
 Two new thin rhombi:
-  origin = (-s,c), angle = 180 - 36
-  origin = (+s,c), angle = 180 + 36
+  origin = (-c,s), angle = 90 + 36
+  origin = (+c,s), angle = 90 - 36
 
 THIN (origin at "double arrow target")
+
+Its coordinates are:
+  c = cos(72); s = sin(72);
+  (0,0) [right]
+  (-c,s) [top]
+  (-2c,0) [left]
+  (-c,-s) [bottom]
+Side length: 1
+Short diagonal: 2c
+
+Smaller thin rhombi has edge length equal to current short diagonal = 2c
+Therefore size ratio of smaller thin rhombi is 2c
+(and this is = 1/2s from the thick rhombi, so all good)
+
+Two new thick rhombi:
+  origin = (0,0), angle = 18
+  origin = (0,0), angle = 180 - 18
+Two new thin rhombi:
+  origin = (-2c,0), angle = 270 - 18
+  origin = (-2c,0), angle = 90 + 18
