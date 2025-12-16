@@ -45,6 +45,20 @@ def index_opp(i):
 def index_nei(i):
     return [2, 3, 2, 3][i - 1]
 
+float3: TypeAlias = tuple[float, float, float]
+
+def cross_product(a, b) -> float3:
+    return (a[1]*b[2] - a[2]*b[1], a[2]*b[0] - a[0]*b[2], a[0]*b[1] - a[1]*b[0])
+
+def norm(xyz: float3) -> float:
+    x, y, z = xyz
+    return (x * x + y * y + z * z) ** 0.5
+
+def normalize(xyz) -> float3:
+    x, y, z = xyz
+    n = norm(xyz)
+    return (x / n, y / n, z / n)
+
 @dataclass
 class Tile:
     thick: bool
@@ -82,6 +96,16 @@ class Tile:
             i_left = index_opp(i_right)
             i_mid = (i_right + i_left) / 2
             return [(right, i_right), (top, i_mid), (left, i_left), (bottom, i_mid)]
+
+    def normal(self) -> tuple[float, float, float]:
+        p1, p2, p3, p4 = self.get_points_with_height()
+        p1 = (p1[0][0], p1[0][1], p1[1])
+        p2 = (p2[0][0], p2[0][1], p2[1])
+        p3 = (p3[0][0], p3[0][1], p3[1])
+        p4 = (p4[0][0], p4[0][1], p4[1])
+        d1 = (p3[0] - p1[0], p3[1] - p1[1], p3[2] - p1[2])
+        d2 = (p4[0] - p2[0], p4[1] - p2[1], p4[2] - p2[2])
+        return normalize(cross_product(d1, d2))
 
     def center(self) -> tuple[float, float]:
         p1, _, p2, _ = self.get_points()
@@ -193,7 +217,7 @@ def main():
     ctx.scale(1, 1)
 
     tiles = [Tile(True, 1, mktransform(0, -400, 0, 430))]
-    steps = 5
+    steps = 6
 
     with Timing() as t:
         for i in range(steps):
@@ -302,13 +326,16 @@ def main():
     surface.write_to_png("tiling.png")
 
     with open("autogen.scad", "w") as fp:
-        fp.write("module autogen() {\n")
+        fp.write("module autogen(thickness) {\n")
         for tile in tiles:
+            nx, ny, nz = tile.normal()
+            thickness = 0.1
+
             fp.write("green() " if tile.thick else "blue() ")
             fp.write("polyhedron(points=[")
             for (x, y), z in tile.get_points_with_height():
-                fp.write(f"[{x}, {y}, {z}], ")
-            fp.write("], faces=[[0, 1, 2, 3]]);\n")
+                fp.write(f"[{x}, {y}, {z}], [{x}+{nx}*thickness, {y}+{ny}*thickness, {z}+{nz}*thickness], ")
+            fp.write("], faces=[[0, 2, 4, 6], [1, 3, 5, 7], [0, 1, 3, 2], [2, 3, 5, 4], [4, 5, 7, 6], [6, 7, 1, 0]]);\n")
         fp.write("}\n")
 
 main()
