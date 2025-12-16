@@ -98,6 +98,7 @@ module flower() {
      blue() tile_sx();
 }
 
+/*
 tile();
 translate([0,1.5,0]) tile_sx();
 translate([0,3,0]) tile_lx();
@@ -108,6 +109,7 @@ translate([4,0,0]) rotate([0,0,90]) green() T();
 translate([4,3,2]) flower();
 
 translate([7.65,0.5,0]) rotate(36) green() T();
+*/
 
 /*
 translate([6,3,2]) {
@@ -115,3 +117,8 @@ translate([6,3,2]) {
     rotate([0,0,72*i]) rotate([0,-beta,0]) tile(center=false);
 }
 */
+
+include <autogen.scad>;
+
+scale([0.1, 0.1, 0]) autogen();
+scale([0.1, 0.1, 3]) translate([0,0,2]) autogen();

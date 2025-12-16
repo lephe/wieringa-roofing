@@ -1,8 +1,26 @@
 import cairo
 import numpy as np
 from math import *
-from dataclasses import dataclass
-import typing
+from dataclasses import dataclass, field
+from typing import *
+import z3.z3 as z3
+import time
+
+# Utility to get time for executing a block and print it later
+class Timing():
+    def __enter__(self):
+        self.start_time = time.time()
+        return self
+    def __exit__(self, type, value, traceback):
+        self.end_time = time.time()
+        self.time = self.end_time - self.start_time
+    def __str__(self):
+        if self.time >= 1:
+            return "%.3g s" % self.time
+        elif self.time >= 1e-3:
+            return "%.3g ms" % (self.time * 1e3)
+        else:
+            return "%d µs" % int(self.time * 1e6)
 
 """
 Transformation that does
@@ -32,26 +50,42 @@ class Tile:
     thick: bool
     index: int
     transform: np.matrix
+    point_indices: list[int] = field(default_factory=list)
 
     def get_point(self, lx: float, ly: float) -> tuple[float, float]:
         u = self.transform * np.matrix([[lx], [ly], [1]])
         return u[0].item(), u[1].item()
 
     def get_points(self) -> list[tuple[float, float]]:
+        return [xy for xy, z in self.get_points_with_height()]
+
+    def get_points_with_height(self) -> list[tuple[tuple[float, float], float]]:
         if self.thick:
             c, s = cos(54 * pi / 180), sin(54 * pi / 180)
             bot = self.get_point(0, 0)
             left = self.get_point(-c, s)
             right = self.get_point(c, s)
             top = self.get_point(0, 2 * s)
-            return [bot, right, top, left]
+
+            i_bot = self.index
+            i_top = index_opp(i_bot)
+            i_mid = (i_bot + i_top) / 2
+            return [(bot, self.index), (right, i_mid), (top, i_top), (left, i_mid)]
         else:
             c, s = cos(72 * pi / 180), sin(72 * pi / 180)
             right = self.get_point(0, 0)
             top = self.get_point(-c, s)
             left = self.get_point(-2 * c, 0)
             bottom = self.get_point(-c, -s)
-            return [right, top, left, bottom]
+
+            i_right = self.index
+            i_left = index_opp(i_right)
+            i_mid = (i_right + i_left) / 2
+            return [(right, i_right), (top, i_mid), (left, i_left), (bottom, i_mid)]
+
+    def center(self) -> tuple[float, float]:
+        p1, _, p2, _ = self.get_points()
+        return (p1[0] + p2[0]) / 2, (p1[1] + p2[1]) / 2
 
     def subdivide(self) -> list["Tile"]:
         s = sin(54 * pi / 180)
@@ -77,31 +111,13 @@ class Tile:
             t2 = Tile(False, opp, self.transform * mktransform(-2*c, 0, 90+18, subscale))
             return [T1, T2, t1, t2]
 
-def subdivide_with_indices(t: Tile, n: int, origin_index: int) -> list[Tile]:
-    if n == 0:
-        t.index = origin_index
-        return [t]
-
-    # We have a forced index for all subdivisions
-    next_forced_index = origin_index
-
-    for sub in t.subdivide(): # lazy
-        subdivide_with_indices(sub, n - 1, next_forced_index)
-
-    ...
-
-    t.subdivide_others()
-    # propagate index
-
-    return [sub1, ...]
-
 def mkcolor(hex: int):
     r, g, b = (hex >> 16) & 0xff, (hex >> 8) & 0xff, (hex & 0xff)
     return r / 255, g / 255, b / 255
 
 def mkcolor_darkened(hex: int, index: int):
     r, g, b = mkcolor(hex)
-    darkening_amount = [0, 0.25, 0.5, 0.75][index - 1]
+    darkening_amount = [0.1, 0.4, 0.7, 1.0][index - 1]
     da = darkening_amount
     return r * da, g * da, b * da
 
@@ -140,6 +156,29 @@ def draw_tile(ctx: cairo.Context, t: Tile, color: int | None = None):
 
     ctx.stroke()
 
+def draw_text(ctx: cairo.Context, x: float, y: float, align: str, text: str) -> None:
+    ext = ctx.text_extents(text)
+    x -= ext.x_bearing
+    y -= ext.y_bearing
+
+    for c in align:
+        if c == ">":
+            x -= ext.width
+        if c == "|":
+            x -= ext.width / 2
+        if c == "v":
+            y -= ext.height
+        if c == "-":
+            y -= ext.height / 2
+
+    ctx.move_to(x, y)
+    ctx.text_path(text)
+    ctx.set_source_rgb(1, 1, 1)
+    ctx.fill_preserve()
+    ctx.set_source_rgb(0, 0, 0)
+    ctx.set_line_width(2.0)
+    ctx.stroke()
+
 def subdivide_set(tiles: list[Tile]) -> list[Tile]:
     new_tiles = []
     for t in tiles:
@@ -151,32 +190,125 @@ def main():
     surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, w, h)
     ctx = cairo.Context(surface)
     ctx.translate(w / 2, h / 2)
-    ctx.scale(1, -1)
+    ctx.scale(1, 1)
 
     tiles = [Tile(True, 1, mktransform(0, -400, 0, 430))]
     steps = 5
 
-    for i in range(steps):
-        tiles = subdivide_set(tiles)
+    with Timing() as t:
+        for i in range(steps):
+            tiles = subdivide_set(tiles)
+    print(f"subdivide: {t}")
 
     # Easiest path forward:
     # -> Construct adjacency graph by looking at point coordinates (approximately)
     # -> Solve for indices in a graph traversal manner
 
-    for tile in tiles:
-        draw_tile(ctx, tile)
+    points: list[tuple[tuple[float, float], list[Tile]]] = []
 
-    # gradient = cairo.LinearGradient(-100, 0, 100, 0)
-    # gradient.add_color_stop_rgb(0, *mkcolor(0xff0000))
-    # gradient.add_color_stop_rgb(1, *mkcolor(0x0000ff))
-    # ctx.set_source(gradient)
-    # ctx.move_to(-w / 2, -h / 2)
-    # ctx.line_to(w / 2, -h / 2)
-    # ctx.line_to(w / 2, h / 2)
-    # ctx.line_to(-w / 2, h / 2)
-    # ctx.close_path()
-    # ctx.fill()
+    def closest_point(target_x: float, target_y: float, points: Iterable[tuple[float, float]]) -> Optional[int]:
+        EPSILON = 0.0001
+        for i, (x, y) in enumerate(points):
+            if abs(x - target_x) + abs(y - target_y) < EPSILON:
+                return i
+        return None
+
+    # Filter tiles for uniqueness
+    unique_tiles: list[Tile] = []
+    unique_tile_centers: list[tuple[float, float]] = []
+
+    print(f"{len(tiles)} tiles")
+
+    with Timing() as t:
+        for tile in tiles:
+            x, y = tile.center()
+            i = closest_point(x, y, unique_tile_centers)
+            if i is None:
+                unique_tiles.append(tile)
+                unique_tile_centers.append((x, y))
+
+        tiles = unique_tiles
+
+        for tile in tiles:
+            tile.point_indices = []
+            for (x, y) in tile.get_points():
+                i = closest_point(x, y, (p[0] for p in points))
+                if i is None:
+                    points.append(((x, y), []))
+                    i = len(points) - 1
+                points[i][1].append(tile)
+                tile.point_indices.append(i)
+    print(f"uniq: {t}")
+
+    # For each i, points[i], make a height variable h_i
+    # For each thick rhombus T with points (bot, right, top, left), constraint:
+    #   h_right = h_left /\
+    #   ((h_top = h_right + 1 /\ h_bot = h_right - 1)
+    #    \/ (h_top = h_right - 1 /\ h_bot = h_right + 1))
+    # For each thin rhombus t with points (right, top, left, bottom), constraint:
+    #   h_top = h_bot /\
+    #   ((h_right = h_top - 1 /\ h_left = h_top + 1)
+    #    \/ (h_left = h_top - 1 /\ h_right = h_top + 1))
+
+    h = [z3.Int(f"h_{i}") for i in range(len(points))]
+    s = z3.Solver()
+
+    for i in range(len(points)):
+        s.add(h[i] >= 1, h[i] <= 4)
+
+    for tile in tiles:
+        if tile.thick:
+            bot, right, top, left = tile.point_indices
+            s.add(h[right] == h[left])
+            s.add(z3.Or(z3.And(h[top] == h[right] + 1, h[bot] == h[right] - 1),
+                        z3.And(h[top] == h[right] - 1, h[bot] == h[right] + 1)))
+        else:
+            right, top, left, bot = tile.point_indices
+            s.add(h[top] == h[bot])
+            s.add(z3.Or(z3.And(h[right] == h[top] - 1, h[left] == h[top] + 1),
+                        z3.And(h[left] == h[top] - 1, h[right] == h[top] + 1)))
+
+    with Timing() as t:
+        if s.check() == z3.sat:
+            m = s.model()
+            print("sat")
+            for tile in tiles:
+                tile.index = m[h[tile.point_indices[0]]].py_value()
+        else:
+            print("unsat")
+    print(f"solve: {t}")
+
+    ctx.select_font_face("DejaVu Sans Mono", cairo.FontSlant.NORMAL, cairo.FontWeight.BOLD)
+    ctx.set_font_size(37)
+
+    with Timing() as t:
+        for tile in tiles:
+            draw_tile(ctx, tile)
+
+        if steps < 5:
+            for ((x, y), adjacent_tiles) in points:
+                radius = [4, 6, 8, 10, 12, 14, 16][len(adjacent_tiles) - 1]
+                ctx.arc(x, y, radius, 0, 2*pi)
+                ctx.set_source_rgb(1, 1, 1)
+                ctx.fill_preserve()
+                ctx.set_source_rgb(0, 0, 0)
+                ctx.set_line_width(4.0)
+                ctx.stroke()
+    print(f"draw: {t}")
+
+    # for i, ((x, y), _) in enumerate(points):
+    #     draw_text(ctx, x + 16, y, "<-", f"{i}")
 
     surface.write_to_png("tiling.png")
+
+    with open("autogen.scad", "w") as fp:
+        fp.write("module autogen() {\n")
+        for tile in tiles:
+            fp.write("green() " if tile.thick else "blue() ")
+            fp.write("polyhedron(points=[")
+            for (x, y), z in tile.get_points_with_height():
+                fp.write(f"[{x}, {y}, {z}], ")
+            fp.write("], faces=[[0, 1, 2, 3]]);\n")
+        fp.write("}\n")
 
 main()
