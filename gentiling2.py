@@ -1,3 +1,4 @@
+#!/usr/bin/env -S uv run python3
 import cairo
 import numpy as np
 from math import *
