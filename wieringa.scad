@@ -118,7 +118,7 @@ translate([6,3,2]) {
 }
 */
 
-include <autogen.scad>;
+include <output/autogen.scad>;
 
 scale([0.1, 0.1, 0]) autogen(0.1);
 scale([0.1, 0.1, 3]) translate([0,0,2]) autogen(0.1);

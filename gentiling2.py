@@ -324,9 +324,9 @@ def main():
     # for i, ((x, y), _) in enumerate(points):
     #     draw_text(ctx, x + 16, y, "<-", f"{i}")
 
-    surface.write_to_png("tiling.png")
+    surface.write_to_png("output/tiling.png")
 
-    with open("autogen.scad", "w") as fp:
+    with open("output/autogen.scad", "w") as fp:
         fp.write("module autogen(thickness) {\n")
         for tile in tiles:
             nx, ny, nz = tile.normal()
