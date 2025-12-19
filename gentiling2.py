@@ -330,21 +330,23 @@ def main():
         fp.write("module autogen(thickness) {\n")
         for tile in tiles:
             nx, ny, nz = tile.normal()
+            fp.write("union() {\n")
             fp.write("  green() " if tile.thick else "blue() ")
-            fp.write("hull() {\n")
+            fp.write("  hull() {\n")
 
             # fp.write("  green() " if tile.thick else "blue() ")
-            fp.write("  polyhedron(points=[")
+            fp.write("    polyhedron(points=[")
             for (x, y), z in tile.get_points_with_height():
-                fp.write(f"    [{x}, {y}, {z}], ")
-            fp.write("  ], faces=[[0, 1, 2, 3]]);\n")
+                fp.write(f"      [{x}, {y}, {z}], ")
+            fp.write("     ], faces=[[0, 1, 2, 3]]);\n")
 
             # fp.write("  red() " if tile.thick else "orange() ")
-            fp.write("  polyhedron(points=[")
+            fp.write("    polyhedron(points=[")
             for (x, y), z in tile.get_points_with_height():
-                fp.write(f"    [{x}+{nx}*thickness, {y}+{ny}*thickness, {z}+{nz}*thickness], ")
-            fp.write("  ], faces=[[0, 1, 2, 3]]);\n")
-            fp.write("}\n")
+                fp.write(f"      [{x}+{nx}*thickness, {y}+{ny}*thickness, {z}+{nz}*thickness], ")
+            fp.write("    ], faces=[[0, 1, 2, 3]]);\n")
+            fp.write("    }\n")
+            fp.write("  }\n")
         fp.write("}\n")
 
 main()
