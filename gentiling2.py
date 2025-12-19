@@ -218,7 +218,7 @@ def main():
     ctx.scale(1, 1)
 
     tiles = [Tile(True, 1, mktransform(0, -400, 0, 430))]
-    steps = 6
+    steps = 5
 
     with Timing() as t:
         for i in range(steps):
@@ -330,13 +330,21 @@ def main():
         fp.write("module autogen(thickness) {\n")
         for tile in tiles:
             nx, ny, nz = tile.normal()
-            thickness = 0.1
+            fp.write("  green() " if tile.thick else "blue() ")
+            fp.write("hull() {\n")
 
-            fp.write("green() " if tile.thick else "blue() ")
-            fp.write("polyhedron(points=[")
+            # fp.write("  green() " if tile.thick else "blue() ")
+            fp.write("  polyhedron(points=[")
             for (x, y), z in tile.get_points_with_height():
-                fp.write(f"[{x}, {y}, {z}], [{x}+{nx}*thickness, {y}+{ny}*thickness, {z}+{nz}*thickness], ")
-            fp.write("], faces=[[0, 2, 4, 6], [1, 3, 5, 7], [0, 1, 3, 2], [2, 3, 5, 4], [4, 5, 7, 6], [6, 7, 1, 0]]);\n")
+                fp.write(f"    [{x}, {y}, {z}], ")
+            fp.write("  ], faces=[[0, 1, 2, 3]]);\n")
+
+            # fp.write("  red() " if tile.thick else "orange() ")
+            fp.write("  polyhedron(points=[")
+            for (x, y), z in tile.get_points_with_height():
+                fp.write(f"    [{x}+{nx}*thickness, {y}+{ny}*thickness, {z}+{nz}*thickness], ")
+            fp.write("  ], faces=[[0, 1, 2, 3]]);\n")
+            fp.write("}\n")
         fp.write("}\n")
 
 main()

@@ -59,6 +59,8 @@ tile_inherent_scale = space_tiles ? 0.95 : 1.0;
 tile_height = 0.0005;
 module green() { color("#62ae19") children(); }
 module blue()  { color("#80afe1") children(); }
+module red() { color("#ee0000") children(); }
+module orange()  { color("#dddd00") children(); }
 module gray()  { color("gray") children(); }
 
 /* Ceiling tile, centered */
@@ -120,5 +122,5 @@ translate([6,3,2]) {
 
 include <output/autogen.scad>;
 
-scale([0.1, 0.1, 0]) autogen(0.1);
-scale([0.1, 0.1, 3]) translate([0,0,2]) autogen(0.1);
+// scale([0.1, 0.1, 0]) autogen(1);
+scale([0.1, 0.1, 1]) translate([0,0,2]) autogen(-2);
