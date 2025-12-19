@@ -1,4 +1,5 @@
 #!/usr/bin/env -S uv run python3
+from random import randint
 import cairo
 import numpy as np
 from math import *
@@ -6,6 +7,38 @@ from dataclasses import dataclass, field
 from typing import *
 import z3.z3 as z3
 import time
+import trimesh
+import numpy as np
+
+def export_tiles_to_file(tiles, thickness=5.0, xyscale=0.5, zscale=10.0, filename="output/model.3mf"):
+    meshes = []
+    
+    for tile in tiles:
+        nx, ny, nz = tile.normal()
+        base = np.array([(x * xyscale, y * xyscale, z * zscale) for (x, y), z, in tile.get_points_with_height()])
+        offset = base - np.array([nx, ny, nz]) * thickness
+        
+        vertices = np.vstack([base, offset])
+        # faces = [
+        #     [0, 1, 2], [0, 2, 3],  # Bottom
+        #     [4, 6, 5], [4, 7, 6],  # Top
+        #     [0, 4, 5], [0, 5, 1],  # Sides
+        #     [1, 5, 6], [1, 6, 2],
+        #     [2, 6, 7], [2, 7, 3],
+        #     [3, 7, 4], [3, 4, 0],
+        # ]
+        
+        mesh = trimesh.PointCloud(vertices)
+        mesh = mesh.convex_hull
+        # print(mesh)
+        # mesh = trimesh.Trimesh(vertices=vertices, faces=faces)
+        mesh.visual.vertex_colors = [0, 255, 0, 255] if tile.thick else [0, 0, 255, 255]
+        mesh.visual.face_colors = [0, 255, 0, 255] if tile.thick else [0, 0, 255, 255]
+        meshes.append(mesh)
+    
+    scene = trimesh.Scene(meshes)
+    scene.export(filename)
+    scene.show()
 
 # Utility to get time for executing a block and print it later
 class Timing():
@@ -218,7 +251,7 @@ def main():
     ctx.scale(1, 1)
 
     tiles = [Tile(True, 1, mktransform(0, -400, 0, 430))]
-    steps = 5
+    steps = 4
 
     with Timing() as t:
         for i in range(steps):
@@ -348,5 +381,8 @@ def main():
             fp.write("    }\n")
             fp.write("  }\n")
         fp.write("}\n")
+
+    # Replace your OpenSCAD generation with:
+    export_tiles_to_file(tiles, filename="output/model.3mf")
 
 main()
