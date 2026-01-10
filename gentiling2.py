@@ -359,27 +359,33 @@ def main():
 
     surface.write_to_png("output/tiling.png")
 
+    with open("output/autogen_thin.scad", "w") as fp_thin:
+        with open("output/autogen_thick.scad", "w") as fp_thick:
+            for tile in tiles:
+                nx, ny, nz = tile.normal()
+                fp = fp_thick if tile.thick else fp_thin
+                fp.write("union() {\n")
+                fp.write("  green() " if tile.thick else "blue() ")
+                fp.write("  hull() {\n")
+
+                # fp.write("  green() " if tile.thick else "blue() ")
+                fp.write("    polyhedron(points=[")
+                for (x, y), z in tile.get_points_with_height():
+                    fp.write(f"      [{x}, {y}, {z}], ")
+                fp.write("     ], faces=[[0, 1, 2, 3]]);\n")
+
+                # fp.write("  red() " if tile.thick else "orange() ")
+                fp.write("    polyhedron(points=[")
+                for (x, y), z in tile.get_points_with_height():
+                    fp.write(f"      [{x}+{nx}*thickness, {y}+{ny}*thickness, {z}+{nz}*thickness], ")
+                fp.write("    ], faces=[[0, 1, 2, 3]]);\n")
+                fp.write("    }\n")
+                fp.write("  }\n")
+
     with open("output/autogen.scad", "w") as fp:
         fp.write("module autogen(thickness) {\n")
-        for tile in tiles:
-            nx, ny, nz = tile.normal()
-            fp.write("union() {\n")
-            fp.write("  green() " if tile.thick else "blue() ")
-            fp.write("  hull() {\n")
-
-            # fp.write("  green() " if tile.thick else "blue() ")
-            fp.write("    polyhedron(points=[")
-            for (x, y), z in tile.get_points_with_height():
-                fp.write(f"      [{x}, {y}, {z}], ")
-            fp.write("     ], faces=[[0, 1, 2, 3]]);\n")
-
-            # fp.write("  red() " if tile.thick else "orange() ")
-            fp.write("    polyhedron(points=[")
-            for (x, y), z in tile.get_points_with_height():
-                fp.write(f"      [{x}+{nx}*thickness, {y}+{ny}*thickness, {z}+{nz}*thickness], ")
-            fp.write("    ], faces=[[0, 1, 2, 3]]);\n")
-            fp.write("    }\n")
-            fp.write("  }\n")
+        fp.write("include <autogen_thin.scad>;\n")
+        fp.write("include <autogen_thick.scad>;\n")
         fp.write("}\n")
 
     # Replace your OpenSCAD generation with:
